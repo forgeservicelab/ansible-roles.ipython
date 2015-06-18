@@ -1,0 +1,89 @@
+---
+- name: Install non-pip managed packages
+  apt:
+    update_cache: yes
+    cache_valid_time: 86400
+    pkg: "{{ item }}"
+    state: present
+  when: "'apt' == ansible_pkg_mgr"
+  with_items:
+    - libfreetype6-dev
+    - libpng12-dev
+    - python-pip
+    - python-dev
+    - build-essential
+    - python-pexpect
+
+- name: Install latest pip and distribute (for building matplotlib)
+  pip:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - pip
+    - distribute
+
+- name: Install pip-managed packages
+  pip:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - ipython
+    - ipython[notebook]
+    - Jinja2
+    - python-dateutil
+    - matplotlib
+
+- name: Create IPython notebook directory
+  sudo: yes
+  sudo_user: "{{ notebook_user }}"
+  file:
+    path: "~{{ notebook_user }}/ipython-notebooks"
+
+- name: Initialize IPython profile
+  sudo: yes
+  sudo_user: "{{ notebook_user }}"
+  shell: ipython profile create
+
+- name: Touch IPython password file
+  sudo: yes
+  sudo_user: "{{ notebook_user }}"
+  file:
+    path: "~{{ notebook_user }}/.ipython/profile_default/nbpasswd.txt"
+    state: touch
+    mode: 0600
+
+- name: Write IPython password
+  sudo: yes
+  sudo_user: "{{ notebook_user }}"
+  shell: python -c 'from IPython.lib import passwd; print passwd("{{ ipython_password }}")' > ~/.ipython/profile_default/nbpasswd.txt
+
+- name: Edit notebook configuration
+  sudo: yes
+  sudo_user: "{{ notebook_user }}"
+  lineinfile:
+    dest: "~{{ notebook_user }}/.ipython/profile_default/ipython_notebook_config.py"
+    line: "{{ item }}"
+  with_items:
+    - c.NotebookApp.ip = '*'
+    - c.NotebookApp.port = 8888
+    - c.NotebookApp.open_browser = False
+    - "PWDFILE='~{{ notebook_user }}/.ipython/profile_default/nbpasswd.txt'"
+    - c.NotebookApp.password = open(PWDFILE).read().strip()
+
+- name: Add environment variables
+  sudo: yes
+  sudo_user: "{{ notebook_user }}"
+  lineinfile:
+    dest: "~{{ notebook_user }}/.bashrc
+    line: "{{ item }}"
+  with_items:
+    - export SPARK_HOME='/usr/lib/spark/'
+    - export PYSPARK_SUBMIT_ARGS='--master yarn --deploy-mode client'
+
+- name: Copy PySpark startup script in place
+  copy:
+    src: 00-pyspark-setup.py
+    dest: "~{{ notebook_user }}/.ipython/profile_default/startup/"
+    owner: "{{ notebook_user }}"
+    group: "{{ notebook_user }}"
+    mode: 0644
