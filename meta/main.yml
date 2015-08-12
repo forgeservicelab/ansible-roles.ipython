@@ -2,7 +2,7 @@
 galaxy_info:
   author: Jukka Nousiainen
   description: Defines a few common tasks and handlers for Debian web servers.
-  company: Digile Oy
+  company: DIGILE Ltd.
   # Some suggested licenses:
   # - BSD (default)
   # - MIT
@@ -10,7 +10,7 @@ galaxy_info:
   # - GPLv3
   # - Apache
   # - CC-BY
-  license: license (GPLv3)
+  license: MIT
   min_ansible_version: 1.8
   #
   # Below are all platforms currently available. Just uncomment
